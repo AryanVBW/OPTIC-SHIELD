@@ -1,0 +1,20 @@
+# OPTIC-SHIELD Device Requirements
+# Optimized for Raspberry Pi 5
+
+# Core dependencies
+ultralytics>=8.0.0
+numpy<2.0
+Pillow>=9.0.0
+PyYAML>=6.0
+
+# Camera support (Pi Camera)
+# picamera2  # Uncomment on Raspberry Pi
+
+# OpenCV for USB camera fallback and image processing
+opencv-python-headless>=4.5.0
+
+# Optional: GPIO support for local alerts (Raspberry Pi only)
+# RPi.GPIO  # Uncomment on Raspberry Pi
+
+# Logging
+python-json-logger>=2.0.0

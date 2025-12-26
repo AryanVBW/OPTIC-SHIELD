@@ -1,0 +1,51 @@
+#!/bin/bash
+# OPTIC-SHIELD Raspberry Pi Setup Script
+# Run this script on a fresh Raspberry Pi 5 with Raspberry Pi OS
+
+set -e
+
+echo "=========================================="
+echo "OPTIC-SHIELD Raspberry Pi Setup"
+echo "=========================================="
+
+# Update system
+echo "[1/6] Updating system packages..."
+sudo apt update && sudo apt upgrade -y
+
+# Install Python dependencies
+echo "[2/6] Installing Python and pip..."
+sudo apt install -y python3-pip python3-venv python3-dev
+
+# Install camera dependencies
+echo "[3/6] Installing camera dependencies..."
+sudo apt install -y python3-picamera2 libcamera-apps
+
+# Install OpenCV dependencies
+echo "[4/6] Installing OpenCV dependencies..."
+sudo apt install -y libopencv-dev python3-opencv
+
+# Create virtual environment
+echo "[5/6] Creating Python virtual environment..."
+cd "$(dirname "$0")/.."
+python3 -m venv venv
+source venv/bin/activate
+
+# Install Python packages
+echo "[6/6] Installing Python packages..."
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Create data directories
+mkdir -p data/images logs models
+
+echo ""
+echo "=========================================="
+echo "Setup complete!"
+echo "=========================================="
+echo ""
+echo "Next steps:"
+echo "1. Copy your NCNN model to: models/yolo11n_ncnn_model/"
+echo "2. Configure: cp config/.env.example config/.env"
+echo "3. Edit config/.env with your settings"
+echo "4. Run: python main.py"
+echo ""

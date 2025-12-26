@@ -1,0 +1,28 @@
+[Unit]
+Description=OPTIC-SHIELD Wildlife Detection Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/OPTIC-SHIELD/device
+Environment=OPTIC_ENV=production
+EnvironmentFile=-/home/pi/OPTIC-SHIELD/device/config/.env
+ExecStart=/home/pi/OPTIC-SHIELD/device/venv/bin/python main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits
+MemoryMax=1G
+CPUQuota=90%
+
+# Watchdog
+WatchdogSec=120
+NotifyAccess=main
+
+[Install]
+WantedBy=multi-user.target

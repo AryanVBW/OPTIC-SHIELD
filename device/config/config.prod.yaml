@@ -1,0 +1,48 @@
+# OPTIC-SHIELD Production Configuration
+# Overrides base config.yaml for production environment
+
+environment: production
+
+detection:
+  model:
+    confidence_threshold: 0.5
+  use_ncnn: true
+  num_threads: 4
+
+camera:
+  enabled: true
+  resolution:
+    width: 640
+    height: 480
+
+storage:
+  database:
+    max_size_mb: 1000
+  images:
+    max_storage_mb: 4000
+    cleanup_days: 14
+
+alerts:
+  enabled: true
+  cooldown_seconds: 30
+  remote:
+    enabled: true
+    include_image: true
+
+dashboard:
+  api_url: "https://your-dashboard.vercel.app/api"
+  websocket_url: "wss://your-dashboard.vercel.app/ws"
+  sync_interval_seconds: 60
+  heartbeat_interval_seconds: 30
+
+system:
+  watchdog:
+    enabled: true
+    timeout_seconds: 60
+  max_memory_mb: 768
+  max_cpu_percent: 90
+
+logging:
+  level: "INFO"
+  console: false
+  file: true

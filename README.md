@@ -87,28 +87,50 @@ OPTIC-SHIELD/
 
 ## Quick Start
 
-### 1. Raspberry Pi Setup
+### 1. Raspberry Pi Setup (Automated)
 
 ```bash
 # Clone repository
 git clone https://github.com/yourusername/OPTIC-SHIELD.git
 cd OPTIC-SHIELD/device
 
-# Install dependencies
-pip install -r requirements.txt
+# Run auto-setup (detects platform, installs dependencies, validates)
+bash scripts/auto_setup.sh
 
-# Configure device
-cp config/config.yaml.example config/config.yaml
-# Edit config.yaml with your settings
-
-# Export YOLO model to NCNN (one-time)
-python scripts/export_model.py
-
-# Run service
-python main.py
+# The script will:
+# ✓ Detect your OS and hardware
+# ✓ Install all dependencies
+# ✓ Create virtual environment
+# ✓ Set up directories
+# ✓ Run validation checks
+# ✓ Generate "Tested OK" report
 ```
 
-### 2. Dashboard Deployment
+### 2. Validate Setup
+
+```bash
+# Run validation to check all 19 components
+python scripts/validate_setup.py
+
+# Run tests
+python scripts/run_tests.py
+```
+
+### 3. Run the Service
+
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Run in development mode
+OPTIC_ENV=development python main.py
+
+# Or start as system service (Linux)
+sudo systemctl start optic-shield
+```
+
+### 4. Dashboard Deployment
+
 
 ```bash
 cd dashboard

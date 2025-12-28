@@ -47,12 +47,12 @@ export function EnhancedDetectionList({ detections }: EnhancedDetectionListProps
 
   if (detections.length === 0) {
     return (
-      <Card className="flex flex-col items-center justify-center py-20 bg-slate-900/20 border-dashed border-slate-800">
+      <Card className="flex flex-col items-center justify-center py-20 bg-surface/20 dark:bg-slate-900/20 border-dashed border-border dark:border-slate-800">
         <div className="relative group">
           <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-          <AlertCircle className="w-16 h-16 text-slate-600 mb-4 relative z-10" />
+          <AlertCircle className="w-16 h-16 text-slate-400 dark:text-slate-600 mb-4 relative z-10" />
         </div>
-        <p className="text-xl font-semibold text-slate-300 mb-2">No detections yet</p>
+        <p className="text-xl font-semibold text-foreground mb-2">No detections yet</p>
         <p className="text-sm text-slate-500 max-w-sm text-center">
           Wildlife detections will appear here automatically when your devices capture activity.
         </p>
@@ -72,13 +72,13 @@ export function EnhancedDetectionList({ detections }: EnhancedDetectionListProps
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-400 transition-colors" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
           <input
             type="text"
             placeholder="Search by animal or device..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:bg-slate-900/80 focus:ring-1 focus:ring-emerald-500/20 transition-all shadow-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-slate-900/50 border border-border dark:border-slate-700/50 rounded-xl text-foreground placeholder-slate-400 focus:outline-none focus:border-emerald-500/50 focus:bg-surface-highlight dark:focus:bg-slate-900/80 focus:ring-1 focus:ring-emerald-500/20 transition-all shadow-sm"
           />
         </div>
 
@@ -137,7 +137,7 @@ export function EnhancedDetectionList({ detections }: EnhancedDetectionListProps
 
             <div className="flex-1 min-w-0 z-10">
               <div className="flex items-center gap-3 mb-1">
-                <span className="font-bold text-white capitalize text-lg tracking-tight group-hover:text-emerald-400 transition-colors">
+                <span className="font-bold text-foreground capitalize text-lg tracking-tight group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">
                   {detection.className}
                 </span>
                 <Badge
@@ -171,8 +171,8 @@ export function EnhancedDetectionList({ detections }: EnhancedDetectionListProps
               </div>
             </div>
 
-            <div className="text-right flex-shrink-0 z-10 pl-4 border-l border-slate-800/50">
-              <div className="text-sm font-bold text-white font-mono group-hover:text-emerald-300 transition-colors">
+            <div className="text-right flex-shrink-0 z-10 pl-4 border-l border-slate-200 dark:border-slate-800/50">
+              <div className="text-sm font-bold text-foreground font-mono group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">
                 {format(new Date(detection.timestamp), 'HH:mm:ss')}
               </div>
               <div className="mt-1 flex justify-end">
@@ -212,14 +212,14 @@ export function EnhancedDetectionList({ detections }: EnhancedDetectionListProps
               backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
             }} />
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+            <div className="flex items-center justify-between p-4 border-b border-border dark:border-slate-700/50">
               <div className="flex items-center gap-3">
                 <span className="text-3xl">
                   {animalEmojis[selectedDetection.className.toLowerCase()] || animalEmojis.default}
                 </span>
                 <div>
-                  <h3 className="text-xl font-bold text-white capitalize">{selectedDetection.className}</h3>
-                  <p className="text-sm text-slate-400">{selectedDetection.deviceName}</p>
+                  <h3 className="text-xl font-bold text-foreground capitalize">{selectedDetection.className}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{selectedDetection.deviceName}</p>
                 </div>
               </div>
               <button
@@ -258,27 +258,27 @@ export function EnhancedDetectionList({ detections }: EnhancedDetectionListProps
             <div className="p-4 space-y-4">
               {/* Stats Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 bg-slate-800/50 rounded-lg">
+                <div className="p-3 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
                   <div className="text-xs text-slate-500 mb-1">Confidence</div>
-                  <div className="text-lg font-bold text-emerald-400">
+                  <div className="text-lg font-bold text-emerald-500 dark:text-emerald-400">
                     {(selectedDetection.confidence * 100).toFixed(1)}%
                   </div>
                 </div>
-                <div className="p-3 bg-slate-800/50 rounded-lg">
+                <div className="p-3 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
                   <div className="text-xs text-slate-500 mb-1">Time</div>
-                  <div className="text-lg font-bold text-white">
+                  <div className="text-lg font-bold text-foreground">
                     {format(new Date(selectedDetection.timestamp), 'HH:mm:ss')}
                   </div>
                 </div>
-                <div className="p-3 bg-slate-800/50 rounded-lg">
+                <div className="p-3 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
                   <div className="text-xs text-slate-500 mb-1">Date</div>
-                  <div className="text-lg font-bold text-white">
+                  <div className="text-lg font-bold text-foreground">
                     {format(new Date(selectedDetection.timestamp), 'MMM d')}
                   </div>
                 </div>
-                <div className="p-3 bg-slate-800/50 rounded-lg">
+                <div className="p-3 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
                   <div className="text-xs text-slate-500 mb-1">Priority</div>
-                  <div className="text-lg font-bold text-white capitalize">
+                  <div className="text-lg font-bold text-foreground capitalize">
                     {selectedDetection.metadata?.priority || 'Normal'}
                   </div>
                 </div>
@@ -287,20 +287,20 @@ export function EnhancedDetectionList({ detections }: EnhancedDetectionListProps
               {/* Location & Camera */}
               <div className="flex flex-wrap gap-3 text-sm">
                 {selectedDetection.cameraId && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg text-slate-300">
-                    <Camera className="w-4 h-4 text-blue-400" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-lg text-slate-600 dark:text-slate-300">
+                    <Camera className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                     <span>{selectedDetection.cameraId}</span>
                   </div>
                 )}
                 {selectedDetection.location && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg text-slate-300">
-                    <MapPin className="w-4 h-4 text-red-400" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-lg text-slate-600 dark:text-slate-300">
+                    <MapPin className="w-4 h-4 text-red-500 dark:text-red-400" />
                     <span>{selectedDetection.location.name}</span>
                   </div>
                 )}
                 {selectedDetection.metadata?.processingTimeMs && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg text-slate-300">
-                    <Zap className="w-4 h-4 text-yellow-400" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-lg text-slate-600 dark:text-slate-300">
+                    <Zap className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />
                     <span>{selectedDetection.metadata.processingTimeMs.toFixed(0)}ms</span>
                   </div>
                 )}

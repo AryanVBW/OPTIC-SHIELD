@@ -16,10 +16,11 @@ module.exports = {
       colors: {
         'nexus-accent': '#FF3B00',
         'nexus-surface': '#0F0F0F',
-        background: '#000000', // Black
-        surface: '#0f172a',    // Slate 900
-        'surface-highlight': '#1e293b', // Slate 800
-        border: '#334155',     // Slate 700
+        background: 'rgb(var(--background) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        'surface-highlight': 'rgb(var(--surface-highlight) / <alpha-value>)',
+        border: 'rgb(var(--border) / <alpha-value>)',
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
 
         primary: {
           50: '#ecfdf5',

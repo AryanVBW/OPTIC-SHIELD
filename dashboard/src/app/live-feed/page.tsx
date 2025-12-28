@@ -55,23 +55,23 @@ export default function LiveFeedPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background text-slate-100 flex font-sans">
+        <div className="min-h-screen bg-background text-foreground flex font-sans">
             <Sidebar onRefresh={handleRefresh} isRefreshing={refreshing} />
 
             <main className="flex-1 overflow-auto relative p-6">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-white tracking-tight mb-1 flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-foreground tracking-tight mb-1 flex items-center gap-3">
                             <Zap className="w-8 h-8 text-nexus-accent" />
                             Live Detection Feed
                         </h1>
-                        <p className="text-slate-400">Real-time monitoring of all connected devices</p>
+                        <p className="text-slate-500 dark:text-slate-400">Real-time monitoring of all connected devices</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${isStreamConnected
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                            ? 'bg-emerald-100 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-400'
+                            : 'bg-amber-100 border-amber-200 text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-400'
                             }`}>
                             <Wifi className="w-3 h-3" />
                             <span>{isStreamConnected ? 'Live Stream Active' : 'Connecting...'}</span>
@@ -85,7 +85,7 @@ export default function LiveFeedPage() {
                     </Alert>
                 )}
 
-                <div className="glass-panel p-1 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border-white/5">
+                <div className="glass-panel p-1 rounded-2xl overflow-hidden shadow-2xl dark:shadow-black/50 border-border dark:border-white/5">
                     <EnhancedDetectionList detections={detections} />
                 </div>
             </main>

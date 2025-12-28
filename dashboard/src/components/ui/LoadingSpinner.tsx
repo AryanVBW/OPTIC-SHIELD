@@ -15,10 +15,10 @@ export function LoadingSpinner({ size = 'md', className = '', label }: LoadingSp
   return (
     <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
       <div className="relative">
-        <div className={`${sizeStyles[size]} border-4 border-slate-700 border-t-blue-500 rounded-full animate-spin`} />
+        <div className={`${sizeStyles[size]} border-4 border-slate-200 dark:border-slate-700 border-t-blue-500 rounded-full animate-spin`} />
       </div>
       {label && (
-        <p className="text-sm text-slate-400 animate-pulse">{label}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 animate-pulse">{label}</p>
       )}
     </div>
   )

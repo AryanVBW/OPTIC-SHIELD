@@ -108,7 +108,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-slate-100 flex font-sans">
+    <div className="min-h-screen bg-background/80 text-foreground flex font-sans transition-colors duration-300">
       <Sidebar onRefresh={handleRefresh} isRefreshing={refreshing} />
 
       {/* Main Content */}
@@ -118,16 +118,16 @@ export default function Dashboard() {
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight mb-1">
+              <h1 className="text-2xl font-bold text-foreground tracking-tight mb-1">
                 System Overview
               </h1>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Operational Metrics & Threat Monitoring
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Link href="/live-feed">
-                <Button variant="outline" size="sm" className="hidden md:flex border-slate-700/50 bg-slate-900/50 text-slate-300">
+                <Button variant="outline" size="sm" className="hidden md:flex border-border bg-surface/50 text-slate-600 dark:text-slate-300 hover:text-foreground">
                   Open Console
                 </Button>
               </Link>
@@ -150,8 +150,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[500px]">
           {/* Left: Activity Chart (2/3 width) */}
           <div className="lg:col-span-2 h-full">
-            <Card variant="glass" className="h-full border-white/5 shadow-xl shadow-black/20 overflow-hidden">
-              <CardHeader className="border-b border-slate-800/50 py-3 min-h-[60px]">
+            <Card variant="glass" className="h-full border-border shadow-xl shadow-black/5 dark:shadow-black/20 overflow-hidden">
+              <CardHeader className="border-b border-border py-3 min-h-[60px]">
                 <CardTitle icon={<BarChart3 className="w-4 h-4 text-primary-400" />}>
                   Detection Activity
                 </CardTitle>

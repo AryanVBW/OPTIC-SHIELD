@@ -12,12 +12,12 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-slate-600/30 text-slate-300 border-slate-600/50',
-  success: 'bg-green-500/20 text-green-400 border-green-500/50',
-  warning: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
-  error: 'bg-red-500/20 text-red-400 border-red-500/50',
-  info: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
-  outline: 'bg-transparent text-slate-400 border-slate-600',
+  default: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-600/30 dark:text-slate-300 dark:border-slate-600/50',
+  success: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/50',
+  warning: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/50',
+  error: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/50',
+  info: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/50',
+  outline: 'bg-transparent text-slate-500 border-slate-300 dark:text-slate-400 dark:border-slate-600',
 }
 
 const sizeStyles: Record<BadgeSize, string> = {
@@ -26,12 +26,12 @@ const sizeStyles: Record<BadgeSize, string> = {
   lg: 'px-4 py-1.5 text-base',
 }
 
-export function Badge({ 
-  children, 
-  variant = 'default', 
-  size = 'sm', 
+export function Badge({
+  children,
+  variant = 'default',
+  size = 'sm',
   className = '',
-  icon 
+  icon
 }: BadgeProps) {
   return (
     <span

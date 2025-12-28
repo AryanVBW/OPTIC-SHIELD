@@ -8,7 +8,7 @@ export function UnicornBackground() {
             className="aura-background-component fixed top-0 w-full h-screen -z-10 pointer-events-none"
             data-alpha-mask="80"
             style={{
-                opacity: 0.8
+                opacity: 0.4
             }}
         >
             <div className="aura-background-component top-0 w-full -z-10 absolute h-full">

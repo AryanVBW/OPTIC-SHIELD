@@ -19,7 +19,7 @@ export function Card({
 }: CardProps) {
 
   const variants = {
-    default: 'bg-slate-900/30 border border-white/5 backdrop-blur-xl',
+    default: 'bg-surface/30 dark:bg-slate-900/30 border border-border dark:border-white/5 backdrop-blur-xl',
     glass: 'glass-panel spotlight-card',
     neon: 'bg-slate-900/60 border border-primary-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)] backdrop-blur-xl'
   }
@@ -51,7 +51,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className = '' }: CardHeaderProps) {
   return (
-    <div className={`px-6 py-5 border-b border-slate-700/30 ${className}`}>
+    <div className={`px-6 py-5 border-b border-border dark:border-slate-700/30 ${className}`}>
       {children}
     </div>
   )
@@ -81,11 +81,11 @@ export function CardTitle({ children, icon, badge, className = '' }: CardTitlePr
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       {icon && (
-        <div className="p-2 rounded-lg bg-slate-800/50 text-slate-400 border border-slate-700/50 shadow-sm">
+        <div className="p-2 rounded-lg bg-white/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border border-border dark:border-slate-700/50 shadow-sm">
           {icon}
         </div>
       )}
-      <h3 className="text-lg font-semibold text-slate-100 flex-1 tracking-tight">{children}</h3>
+      <h3 className="text-lg font-semibold text-foreground flex-1 tracking-tight">{children}</h3>
       {badge && <div className="ml-2">{badge}</div>}
     </div>
   )

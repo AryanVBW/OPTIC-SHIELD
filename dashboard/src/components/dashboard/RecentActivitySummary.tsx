@@ -15,32 +15,32 @@ export function RecentActivitySummary({ detections }: RecentActivitySummaryProps
     const recentDetections = detections.slice(0, 7) // Show slightly more items since it's compact
 
     return (
-        <Card variant="glass" className="h-full border-white/5">
-            <CardHeader className="border-b border-slate-800/50 py-3 min-h-[60px] flex flex-row items-center justify-between">
+        <Card variant="glass" className="h-full border-border dark:border-white/5">
+            <CardHeader className="border-b border-border dark:border-slate-800/50 py-3 min-h-[60px] flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Activity className="w-4 h-4 text-nexus-accent" />
                     <span className="font-semibold text-white tracking-tight">Live Feed</span>
                 </div>
                 <Link href="/live-feed">
-                    <Button variant="ghost" size="sm" className="h-8 text-xs text-slate-400 hover:text-white px-2">
+                    <Button variant="ghost" size="sm" className="h-8 text-xs text-slate-500 dark:text-slate-400 hover:text-foreground hover:bg-slate-100 dark:hover:bg-white/5 px-2">
                         View All <ArrowRight className="w-3 h-3 ml-1" />
                     </Button>
                 </Link>
             </CardHeader>
 
             <CardContent className="p-0">
-                <div className="divide-y divide-slate-800/50">
+                <div className="divide-y divide-border dark:divide-slate-800/50">
                     {recentDetections.length === 0 ? (
                         <div className="p-8 text-center text-slate-500 text-sm">
                             No recent activity recorded
                         </div>
                     ) : (
                         recentDetections.map((detection) => (
-                            <div key={detection.id} className="group flex items-center justify-between p-3 hover:bg-white/5 transition-colors cursor-default">
+                            <div key={detection.id} className="group flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-default">
                                 <div className="flex items-center gap-3 overflow-hidden">
                                     <div className="w-1.5 h-1.5 rounded-full bg-nexus-accent animate-pulse" />
                                     <div className="flex flex-col min-w-0">
-                                        <span className="text-sm font-medium text-slate-200 truncate group-hover:text-nexus-accent transition-colors">
+                                        <span className="text-sm font-medium text-foreground truncate group-hover:text-nexus-accent transition-colors">
                                             {detection.className}
                                         </span>
                                         <span className="text-xs text-slate-500 truncate flex items-center gap-1">

@@ -79,7 +79,7 @@ export function StatusIndicator({
         )}
       </div>
       {displayLabel && (
-        <span className={`text-sm font-medium ${status === 'online' ? 'text-slate-200' : 'text-slate-400'}`}>
+        <span className={`text-sm font-medium ${status === 'online' ? 'text-foreground dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>
           {displayLabel}
         </span>
       )}

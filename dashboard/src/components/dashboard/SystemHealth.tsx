@@ -33,7 +33,7 @@ export function SystemHealth({ devices, onRefresh, isRefreshing }: SystemHealthP
     }
 
     return (
-        <Card className="border-white/5 bg-slate-900/40 backdrop-blur-md overflow-hidden relative group">
+        <Card className="border-border bg-surface/40 backdrop-blur-md overflow-hidden relative group">
             <div className={`absolute inset-0 bg-gradient-to-r ${totalIssues === 0 ? 'from-emerald-500/10 to-teal-500/5' : 'from-amber-500/10 to-rose-500/5'} opacity-50`} />
 
             <CardContent className="p-0 relative">
@@ -45,7 +45,7 @@ export function SystemHealth({ devices, onRefresh, isRefreshing }: SystemHealthP
                                 <StatusIcon className={`w-8 h-8 ${statusColor}`} />
                             </div>
                             <div>
-                                <div className="text-sm text-slate-400 font-medium uppercase tracking-wider mb-1">System Status</div>
+                                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider mb-1">System Status</div>
                                 <div className={`text-2xl font-bold ${statusColor} tracking-tight`}>{statusText}</div>
                             </div>
                         </div>
@@ -53,24 +53,24 @@ export function SystemHealth({ devices, onRefresh, isRefreshing }: SystemHealthP
                         {/* Health Score */}
                         <div className="text-right hidden sm:block">
                             <div className="text-sm text-slate-500 font-medium mb-1">Health Score</div>
-                            <div className="text-3xl font-mono font-bold text-white">{healthScore}%</div>
+                            <div className="text-3xl font-mono font-bold text-foreground">{healthScore}%</div>
                         </div>
                     </div>
 
                     {/* Metrics Section */}
                     <div className="flex-1 p-6 flex items-center justify-around gap-4 bg-white/5">
                         <div className="text-center group/metric cursor-default">
-                            <div className="flex items-center justify-center gap-2 text-slate-400 mb-1 group-hover/metric:text-white transition-colors">
+                            <div className="flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 mb-1 group-hover/metric:text-foreground transition-colors">
                                 <Server className="w-4 h-4" />
                                 <span className="text-xs font-semibold uppercase">Devices</span>
                             </div>
-                            <div className="text-xl font-bold text-white">{devices.length}</div>
+                            <div className="text-xl font-bold text-foreground">{devices.length}</div>
                         </div>
 
                         <div className="w-px h-10 bg-slate-700/50" />
 
                         <div className="text-center group/metric cursor-default">
-                            <div className="flex items-center justify-center gap-2 text-slate-400 mb-1 group-hover/metric:text-emerald-400 transition-colors">
+                            <div className="flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 mb-1 group-hover/metric:text-emerald-500 dark:group-hover/metric:text-emerald-400 transition-colors">
                                 <Wifi className="w-4 h-4" />
                                 <span className="text-xs font-semibold uppercase">Online</span>
                             </div>
@@ -82,7 +82,7 @@ export function SystemHealth({ devices, onRefresh, isRefreshing }: SystemHealthP
                         <div className="w-px h-10 bg-slate-700/50" />
 
                         <div className="text-center group/metric cursor-default">
-                            <div className="flex items-center justify-center gap-2 text-slate-400 mb-1 group-hover/metric:text-rose-400 transition-colors">
+                            <div className="flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 mb-1 group-hover/metric:text-rose-500 dark:group-hover/metric:text-rose-400 transition-colors">
                                 <AlertTriangle className="w-4 h-4" />
                                 <span className="text-xs font-semibold uppercase">Offline</span>
                             </div>

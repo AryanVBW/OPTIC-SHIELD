@@ -71,7 +71,7 @@ export function EnhancedStatsOverview({ stats }: EnhancedStatsOverviewProps) {
         <Card
           key={index}
           hover
-          className={`border-slate-800 bg-slate-900/40 overflow-hidden relative group`}
+          className={`border-border dark:border-slate-800 bg-surface/50 dark:bg-slate-900/40 overflow-hidden relative group`}
         >
           {/* Background Gradient */}
           <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradientFrom} ${stat.gradientTo} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
@@ -82,7 +82,7 @@ export function EnhancedStatsOverview({ stats }: EnhancedStatsOverviewProps) {
                 <stat.icon className={`w-6 h-6 ${stat.color}`} />
               </div>
               {stat.trend !== null && (
-                <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-slate-800/50 border border-slate-700/50 ${stat.trend > 0 ? 'text-emerald-400' : 'text-rose-400'
+                <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-surface-highlight dark:bg-slate-800/50 border border-border dark:border-slate-700/50 ${stat.trend > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'
                   }`}>
                   {stat.trend > 0 ? (
                     <ArrowUp className="w-3 h-3" />
@@ -95,10 +95,10 @@ export function EnhancedStatsOverview({ stats }: EnhancedStatsOverviewProps) {
             </div>
 
             <div className="space-y-1">
-              <div className="text-sm font-medium text-slate-400 group-hover:text-slate-300 transition-colors">
+              <div className="text-sm font-medium text-slate-500 dark:text-slate-400 group-hover:text-foreground dark:group-hover:text-slate-300 transition-colors">
                 {stat.label}
               </div>
-              <div className="text-3xl font-bold text-white capitalize tracking-tight">
+              <div className="text-3xl font-bold text-foreground capitalize tracking-tight">
                 {stat.value}
                 {stat.total !== undefined && (
                   <span className="text-lg text-slate-600 font-medium ml-1.5">/ {stat.total}</span>

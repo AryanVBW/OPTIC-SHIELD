@@ -2,14 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 248, 250, 252;
-  --background-start-rgb: 0, 0, 0;
-  --background-end-rgb: 10, 10, 10;
+@layer base {
+  :root {
+    /* Light Mode Defaults */
+    --background: 248 250 252;
+    /* Slate 50 */
+    --surface: 255 255 255;
+    /* White */
+    --surface-highlight: 241 245 249;
+    /* Slate 100 */
+    --foreground: 15 23 42;
+    /* Slate 900 */
+    --border: 226 232 240;
+    /* Slate 200 */
+  }
+
+  .dark {
+    /* Dark Mode Defaults */
+    --background: 0 0 0;
+    /* Black */
+    --surface: 15 23 42;
+    /* Slate 900 */
+    --surface-highlight: 30 41 59;
+    /* Slate 800 */
+    --foreground: 248 250 252;
+    /* Slate 50 */
+    --border: 51 65 85;
+    /* Slate 700 */
+  }
 }
 
 body {
-  @apply text-slate-100 bg-black min-h-screen overflow-x-hidden selection:bg-primary-500/30 selection:text-primary-200 relative;
+  @apply text-slate-900 dark:text-slate-100 bg-background min-h-screen overflow-x-hidden selection:bg-primary-500/30 selection:text-primary-200 relative;
   font-feature-settings: "rlig" 1, "calt" 1;
 }
 
@@ -44,28 +68,25 @@ body::before {
 /* Glassmorphism Utilities */
 @layer components {
   .glass-panel {
-    background: rgba(10, 10, 10, 0.4);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    @apply bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-slate-200 dark:border-white/10;
     position: relative;
     overflow: hidden;
   }
 
   .glass-card {
-    @apply bg-gradient-to-br from-white/5 to-white/0 backdrop-blur-xl border border-white/10 shadow-lg hover:border-white/20 hover:bg-white/5 transition-all duration-300;
+    @apply bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300;
   }
 
   .glass-button {
-    @apply relative overflow-hidden bg-white/5 hover:bg-white/10 active:bg-white/5 border border-white/10 backdrop-blur-md transition-all duration-200;
+    @apply relative overflow-hidden bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 active:bg-slate-300 dark:active:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-md transition-all duration-200 text-slate-900 dark:text-white;
   }
 
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-emerald-400;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-emerald-600 dark:from-primary-400 dark:to-emerald-400;
   }
 
   .text-gradient-blue {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400;
   }
 }
 

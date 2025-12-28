@@ -51,18 +51,18 @@ export default function DevicesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background text-slate-100 flex font-sans">
+        <div className="min-h-screen bg-background text-foreground flex font-sans">
             <Sidebar onRefresh={handleRefresh} isRefreshing={refreshing} />
 
             <main className="flex-1 overflow-auto relative p-6">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-white tracking-tight mb-1 flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-foreground tracking-tight mb-1 flex items-center gap-3">
                             <Camera className="w-8 h-8 text-nexus-accent" />
                             Connected Devices
                         </h1>
-                        <p className="text-slate-400">Manage and monitor your camera grid</p>
+                        <p className="text-slate-500 dark:text-slate-400">Manage and monitor your camera grid</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <Button variant="primary" icon={<Plus className="w-4 h-4" />}>
@@ -78,12 +78,12 @@ export default function DevicesPage() {
                 )}
 
                 {devices.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 bg-slate-900/20 border border-dashed border-slate-800 rounded-2xl">
+                    <div className="flex flex-col items-center justify-center py-20 bg-surface/20 dark:bg-slate-900/20 border border-dashed border-border dark:border-slate-800 rounded-2xl">
                         <div className="relative group mb-6">
                             <div className="absolute inset-0 bg-primary-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <Server className="w-20 h-20 text-slate-700 relative z-10" />
+                            <Server className="w-20 h-20 text-slate-400 dark:text-slate-700 relative z-10" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-300 mb-2">No Devices Found</h3>
+                        <h3 className="text-xl font-bold text-foreground dark:text-slate-300 mb-2">No Devices Found</h3>
                         <p className="text-slate-500 max-w-md text-center mb-6">
                             Connect your edge devices to start monitoring wildlife activity.
                         </p>

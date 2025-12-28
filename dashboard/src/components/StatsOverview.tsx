@@ -35,7 +35,7 @@ export default function StatsOverview({ stats }: StatsOverviewProps) {
     },
     {
       label: 'Top Species',
-      value: stats?.classDistribution 
+      value: stats?.classDistribution
         ? Object.keys(stats.classDistribution)[0] || '-'
         : '-',
       subValue: stats?.classDistribution
@@ -52,15 +52,15 @@ export default function StatsOverview({ stats }: StatsOverviewProps) {
       {statCards.map((stat, index) => (
         <div
           key={index}
-          className="bg-slate-800 rounded-xl border border-slate-700 p-5"
+          className="bg-surface rounded-xl border border-border p-5 shadow-sm dark:shadow-none"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-slate-400">{stat.label}</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">{stat.label}</span>
             <div className={`p-2 rounded-lg ${stat.bgColor}`}>
               <stat.icon className={`w-4 h-4 ${stat.color}`} />
             </div>
           </div>
-          <div className="text-2xl font-bold text-white capitalize">
+          <div className="text-2xl font-bold text-foreground capitalize">
             {stat.value}
           </div>
           <div className="text-sm text-slate-500 mt-1">

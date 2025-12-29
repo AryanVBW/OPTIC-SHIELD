@@ -270,12 +270,23 @@ class UploadService:
                 max_size_kb=self.max_image_size_kb
             )
         
+        # Get camera details for this detection
+        camera_id = item.get('camera_id', 'unknown')
+        camera_details = {"id": camera_id, "name": "Unknown Camera", "model": "Unknown", "type": "unknown"}
+        
+        # Find matching camera from registered cameras
+        for cam in self._cameras:
+            if cam.get("id") == camera_id:
+                camera_details = cam
+                break
+        
         # Build payload
         payload = {
             "event_id": event_id,
             "detection_id": item.get('id', 0),
             "device_id": item['device_id'],
-            "camera_id": item['camera_id'],
+            "camera_id": camera_id,
+            "camera_details": camera_details,
             "timestamp": item['timestamp'],
             "class_name": item['class_name'],
             "class_id": item['class_id'],
@@ -393,11 +404,21 @@ class UploadService:
         if image_data and not image_base64:
             image_base64 = base64.b64encode(image_data).decode('utf-8')
         
+        # Get camera details for this detection
+        camera_details = {"id": camera_id, "name": "Unknown Camera", "model": "Unknown", "type": "unknown"}
+        
+        # Find matching camera from registered cameras
+        for cam in self._cameras:
+            if cam.get("id") == camera_id:
+                camera_details = cam
+                break
+        
         payload = {
             "event_id": event_id,
             "detection_id": detection_id,
             "device_id": self.device_id,
             "camera_id": camera_id,
+            "camera_details": camera_details,
             "timestamp": time.time(),
             "class_name": class_name,
             "class_id": class_id,

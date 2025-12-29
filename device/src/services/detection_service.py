@@ -14,7 +14,7 @@ from enum import Enum
 
 from ..core.config import Config
 from ..core.detector import WildlifeDetector, Detection
-from ..core.camera import CameraManager, CameraFrame
+from ..core.camera import CameraManager, MultiCameraManager, CameraFrame, CameraStatus, CameraError
 from ..storage.database import DetectionDatabase, DetectionRecord
 from ..storage.image_store import ImageStore
 
@@ -37,6 +37,7 @@ class DetectionEvent:
     detections: List[Detection]
     processing_time_ms: float
     timestamp: float
+    camera_id: str = ""  # Added camera identifier
 
 
 class DetectionService:
@@ -56,6 +57,7 @@ class DetectionService:
         self.state = ServiceState.STOPPED
         
         self.camera: Optional[CameraManager] = None
+        self.multi_camera: Optional[MultiCameraManager] = None  # Multi-camera support
         self.detector: Optional[WildlifeDetector] = None
         self.database: Optional[DetectionDatabase] = None
         self.image_store: Optional[ImageStore] = None
@@ -71,7 +73,16 @@ class DetectionService:
         self._frame_count = 0
         self._detection_count = 0
         self._error_count = 0
+        self._camera_error_count = 0
         self._start_time: Optional[float] = None
+        self._last_camera_error: Optional[CameraError] = None
+        
+        # Use multi-camera mode based on config (auto-detect all cameras)
+        self._use_multi_camera = True  # Always try multi-camera first
+        
+        # Callbacks for camera errors
+        self._camera_error_callbacks: List[Callable[[CameraError], None]] = []
+        self._camera_status_callbacks: List[Callable[[CameraStatus], None]] = []
         
         self._setup_signal_handlers()
     
@@ -124,18 +135,57 @@ class DetectionService:
                 raise RuntimeError("Model loading failed")
             
             if self.config.camera.enabled:
-                self.camera = CameraManager(
-                    width=self.config.camera.width,
-                    height=self.config.camera.height,
-                    fps=self.config.camera.fps,
-                    format=self.config.camera.format,
-                    rotation=self.config.camera.rotation,
-                    fallback_usb=self.config.camera.fallback_usb,
-                    usb_device_id=self.config.camera.usb_device_id
-                )
-                if not self.camera.initialize():
-                    logger.warning("Camera initialization failed, running in headless mode")
-                    self.camera = None
+                # Use MultiCameraManager for auto-detection of all cameras
+                # This automatically finds all connected cameras (1 to N) without manual config
+                if self.config.camera.multi_camera_enabled:
+                    self.multi_camera = MultiCameraManager(
+                        width=self.config.camera.width,
+                        height=self.config.camera.height,
+                        fps=self.config.camera.fps,
+                        format=self.config.camera.format,
+                        rotation=self.config.camera.rotation,
+                        max_cameras=self.config.camera.max_cameras,
+                        auto_recovery=True
+                    )
+                    
+                    # Register callbacks for multi-camera
+                    self.multi_camera.add_error_callback(self._on_multi_camera_error)
+                    self.multi_camera.add_status_callback(self._on_multi_camera_status_change)
+                    
+                    # Auto-detect and initialize all cameras
+                    camera_count = self.multi_camera.auto_detect_and_initialize()
+                    
+                    if camera_count > 0:
+                        logger.info(f"Multi-camera mode: {camera_count} camera(s) active")
+                        self._use_multi_camera = True
+                    else:
+                        logger.warning("No cameras detected in multi-camera mode")
+                        self.multi_camera = None
+                        self._use_multi_camera = False
+                
+                # Fallback to single camera mode
+                if not self.multi_camera:
+                    self._use_multi_camera = False
+                    self.camera = CameraManager(
+                        width=self.config.camera.width,
+                        height=self.config.camera.height,
+                        fps=self.config.camera.fps,
+                        format=self.config.camera.format,
+                        rotation=self.config.camera.rotation,
+                        fallback_usb=self.config.camera.fallback_usb,
+                        usb_device_id=self.config.camera.usb_device_id,
+                        auto_recovery=True,
+                        max_recovery_attempts=5,
+                        recovery_delay=2.0
+                    )
+                    
+                    # Register camera error and status callbacks
+                    self.camera.add_error_callback(self._on_camera_error)
+                    self.camera.add_status_callback(self._on_camera_status_change)
+                    
+                    if not self.camera.initialize():
+                        logger.warning("Camera initialization failed, running in headless mode")
+                        self.camera = None
             
             logger.info("Detection service initialized successfully")
             return True
@@ -148,6 +198,62 @@ class DetectionService:
     def add_detection_callback(self, callback: Callable[[DetectionEvent], None]):
         """Add a callback to be called on each detection."""
         self._detection_callbacks.append(callback)
+    
+    def add_camera_error_callback(self, callback: Callable[[CameraError], None]):
+        """Add a callback for camera errors."""
+        self._camera_error_callbacks.append(callback)
+    
+    def add_camera_status_callback(self, callback: Callable[[CameraStatus], None]):
+        """Add a callback for camera status changes."""
+        self._camera_status_callbacks.append(callback)
+    
+    def _on_camera_error(self, error: CameraError):
+        """Handle camera errors."""
+        self._camera_error_count += 1
+        self._last_camera_error = error
+        logger.error(f"Camera error: {error.message} (code: {error.error_code})")
+        
+        # Notify registered callbacks
+        for callback in self._camera_error_callbacks:
+            try:
+                callback(error)
+            except Exception as e:
+                logger.error(f"Camera error callback failed: {e}")
+    
+    def _on_camera_status_change(self, status: CameraStatus):
+        """Handle camera status changes."""
+        logger.info(f"Camera status changed to: {status.value}")
+        
+        # Notify registered callbacks
+        for callback in self._camera_status_callbacks:
+            try:
+                callback(status)
+            except Exception as e:
+                logger.error(f"Camera status callback failed: {e}")
+    
+    def _on_multi_camera_error(self, camera_id: str, error: CameraError):
+        """Handle multi-camera errors."""
+        self._camera_error_count += 1
+        self._last_camera_error = error
+        logger.error(f"Camera {camera_id} error: {error.message} (code: {error.error_code})")
+        
+        # Notify registered callbacks
+        for callback in self._camera_error_callbacks:
+            try:
+                callback(error)
+            except Exception as e:
+                logger.error(f"Camera error callback failed: {e}")
+    
+    def _on_multi_camera_status_change(self, camera_id: str, status: CameraStatus):
+        """Handle multi-camera status changes."""
+        logger.info(f"Camera {camera_id} status changed to: {status.value}")
+        
+        # Notify registered callbacks
+        for callback in self._camera_status_callbacks:
+            try:
+                callback(status)
+            except Exception as e:
+                logger.error(f"Camera status callback failed: {e}")
     
     def start(self):
         """Start the detection service."""
@@ -196,6 +302,10 @@ class DetectionService:
         if self._processing_thread and self._processing_thread.is_alive():
             self._processing_thread.join(timeout=timeout)
         
+        # Stop multi-camera if used
+        if self.multi_camera:
+            self.multi_camera.stop()
+        
         if self.camera:
             self.camera.stop()
         
@@ -213,12 +323,22 @@ class DetectionService:
             loop_start = time.perf_counter()
             
             try:
-                if self.camera and self.camera.is_running:
+                # Multi-camera mode: capture from all cameras
+                if self.multi_camera and self.multi_camera.is_running:
+                    frames = self.multi_camera.capture_all()
+                    
+                    for camera_id, frame in frames:
+                        if frame:
+                            self._frame_count += 1
+                            self._process_frame(frame, camera_id=camera_id)
+                
+                # Single camera mode fallback
+                elif self.camera and self.camera.is_running:
                     frame = self.camera.capture()
                     
                     if frame:
                         self._frame_count += 1
-                        self._process_frame(frame)
+                        self._process_frame(frame, camera_id="default")
                 else:
                     time.sleep(0.1)
                 
@@ -232,7 +352,7 @@ class DetectionService:
             if sleep_time > 0:
                 time.sleep(sleep_time)
     
-    def _process_frame(self, frame: CameraFrame):
+    def _process_frame(self, frame: CameraFrame, camera_id: str = "default"):
         """Process a single frame for detections."""
         start_time = time.perf_counter()
         
@@ -241,14 +361,15 @@ class DetectionService:
             
             processing_time = (time.perf_counter() - start_time) * 1000
             
-            filtered_detections = self._apply_cooldown(detections)
+            filtered_detections = self._apply_cooldown(detections, camera_id)
             
             if filtered_detections:
                 event = DetectionEvent(
                     frame=frame,
                     detections=filtered_detections,
                     processing_time_ms=processing_time,
-                    timestamp=time.time()
+                    timestamp=time.time(),
+                    camera_id=camera_id
                 )
                 
                 try:
@@ -259,19 +380,20 @@ class DetectionService:
         except Exception as e:
             logger.error(f"Frame processing error: {e}")
     
-    def _apply_cooldown(self, detections: List[Detection]) -> List[Detection]:
-        """Filter detections based on cooldown period."""
+    def _apply_cooldown(self, detections: List[Detection], camera_id: str = "default") -> List[Detection]:
+        """Filter detections based on cooldown period (per camera)."""
         cooldown = self.config.alerts.cooldown_seconds
         current_time = time.time()
         filtered = []
         
         for detection in detections:
-            class_name = detection.class_name
-            last_time = self._last_detection_time.get(class_name, 0)
+            # Use camera_id + class_name for per-camera cooldown
+            cooldown_key = f"{camera_id}:{detection.class_name}"
+            last_time = self._last_detection_time.get(cooldown_key, 0)
             
             if current_time - last_time >= cooldown:
                 filtered.append(detection)
-                self._last_detection_time[class_name] = current_time
+                self._last_detection_time[cooldown_key] = current_time
         
         return filtered
     
@@ -350,8 +472,29 @@ class DetectionService:
         if self.detector:
             stats["detector"] = self.detector.get_stats()
         
-        if self.camera:
+        # Multi-camera stats
+        if self.multi_camera:
+            stats["multi_camera"] = True
+            stats["camera_count"] = self.multi_camera.get_camera_count()
+            stats["cameras"] = self.multi_camera.get_stats()
+            stats["camera_health"] = self.multi_camera.get_health_status()
+        elif self.camera:
+            stats["multi_camera"] = False
+            stats["camera_count"] = 1
             stats["camera"] = self.camera.get_stats()
+            stats["camera_health"] = self.camera.get_health_status()
+        else:
+            stats["multi_camera"] = False
+            stats["camera_count"] = 0
+        
+        stats["camera_error_count"] = self._camera_error_count
+        if self._last_camera_error:
+            stats["last_camera_error"] = {
+                "message": self._last_camera_error.message,
+                "code": self._last_camera_error.error_code,
+                "timestamp": self._last_camera_error.timestamp,
+                "recoverable": self._last_camera_error.recoverable
+            }
         
         if self.database:
             stats["database"] = self.database.get_stats()

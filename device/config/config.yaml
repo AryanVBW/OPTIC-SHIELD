@@ -37,8 +37,13 @@ detection:
   num_threads: 4
 
 # Camera settings
+# Camera settings - AUTO-DETECTION ENABLED
+# All connected cameras (1 to N) will be automatically detected and used
+# No manual configuration needed!
 camera:
   enabled: true
+  
+  # Resolution for all cameras
   resolution:
     width: 640
     height: 480
@@ -46,7 +51,12 @@ camera:
   fps: 10
   rotation: 0
   
-  # Fallback to USB camera if Pi Camera fails
+  # Multi-camera auto-detection (NEW!)
+  # Set to true to automatically detect and use ALL available cameras
+  multi_camera_enabled: true
+  max_cameras: 10  # Maximum number of cameras to detect (1-10)
+  
+  # Legacy single-camera settings (used when multi_camera_enabled is false)
   fallback_usb: true
   usb_device_id: 0
 
@@ -197,18 +207,19 @@ system:
   # Graceful shutdown timeout
   shutdown_timeout_seconds: 10
 
-# Automatic Updates
+# Updates (Portal-triggered only)
 updates:
-  enabled: true
+  # Disable automatic update checking - updates only triggered from portal
+  enabled: false
   
   # Git remote and branch to pull from
   remote: "origin"
   branch: "main"
   
-  # Check interval in seconds (default: 1 hour)
-  check_interval_seconds: 3600
+  # Check interval disabled (0 = no auto-check, portal triggers only)
+  check_interval_seconds: 0
   
-  # Auto-apply updates without manual trigger
+  # Auto-apply updates disabled - only portal can trigger
   auto_update: false
   
   # Service name for restart

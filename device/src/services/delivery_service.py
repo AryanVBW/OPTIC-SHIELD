@@ -385,18 +385,29 @@ class GuaranteedDeliveryService:
                     max_size_kb=self.max_image_size_kb
                 )
             
+            # Get camera details for this detection
+            camera_id = payload.get("camera_id", "unknown")
+            camera_details = {"id": camera_id, "name": "Unknown Camera", "model": "Unknown", "type": "unknown"}
+            
+            # Find matching camera from registered cameras
+            for cam in self._cameras:
+                if cam.get("id") == camera_id:
+                    camera_details = cam
+                    break
+            
             # Build request payload
             request_payload = {
-                "event_id": message.id,
+                "event_id": payload.get("detection_id", message.id),
                 "device_id": self.device_id,
-                "camera_id": payload.get("camera_id", ""),
+                "camera_id": camera_id,
+                "camera_details": camera_details,
                 "timestamp": payload.get("timestamp", time.time()),
-                "class_name": payload.get("class_name", ""),
-                "class_id": payload.get("class_id", 0),
-                "confidence": payload.get("confidence", 0.0),
-                "bbox": payload.get("bbox", []),
+                "class_name": payload.get("class_name"),
+                "class_id": payload.get("class_id"),
+                "confidence": payload.get("confidence"),
+                "bbox": payload.get("bbox"),
                 "image_base64": image_base64,
-                "location": self._location,
+                "location": payload.get("location", self._location),
                 "metadata": {
                     **payload.get("metadata", {}),
                     "device_info": self._device_info,

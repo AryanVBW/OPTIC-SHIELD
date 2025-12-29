@@ -2,7 +2,7 @@
 # Optimized for Raspberry Pi 5
 
 # Core dependencies
-ultralytics>=8.0.0
+ultralytics>=8.3.241
 numpy<2.0
 Pillow>=9.0.0
 PyYAML>=6.0

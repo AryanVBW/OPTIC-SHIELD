@@ -15,6 +15,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+# Early dependency check before importing other modules
+from src.utils.dependency_checker import check_and_install_dependencies
+
+# Check and auto-install dependencies before proceeding
+if not check_and_install_dependencies(auto_install=True):
+    print("ERROR: Failed to ensure all dependencies. Please install manually.")
+    print("Run: pip install -r requirements.txt")
+    sys.exit(1)
+
 from src.core.config import Config
 from src.services.detection_service import DetectionService, ServiceState
 from src.services.alert_service import AlertService
@@ -116,7 +125,8 @@ class OpticShield:
                     device_secret=device_secret,
                     sync_interval=self.config.dashboard.sync_interval_seconds,
                     heartbeat_interval=self.config.dashboard.heartbeat_interval_seconds,
-                    offline_queue_max_size=self.config.dashboard.offline_queue_max_size
+                    offline_queue_max_size=self.config.dashboard.offline_queue_max_size,
+                    environment=self.config.environment
                 )
             
             self.detection_service = DetectionService(self.config)
@@ -193,29 +203,33 @@ class OpticShield:
                 self._handle_detection_for_delivery
             )
             
-            # Initialize update service for automatic updates
-            device_secret = os.getenv("OPTIC_DEVICE_SECRET", "")
-            self.update_service = UpdateService(
-                repo_path=str(Path(__file__).parent.parent),  # Root of the repo
-                remote_name="origin",
-                branch=os.getenv("OPTIC_UPDATE_BRANCH", "main"),
-                check_interval=float(os.getenv("OPTIC_UPDATE_INTERVAL", "3600")),
-                auto_update=os.getenv("OPTIC_AUTO_UPDATE", "false").lower() == "true",
-                service_name="optic-shield",
-                api_url=self.config.dashboard.api_url,
-                api_key=self.config.dashboard.api_key,
-                device_id=self.config.device.id,
-                device_secret=device_secret
-            )
-            self.update_service.initialize()
-            
-            # Register update callbacks
-            self.update_service.add_update_available_callback(
-                lambda info: logger.info(f"Update available: {info.commits_behind} commits behind")
-            )
-            self.update_service.add_update_complete_callback(
-                lambda result: logger.info(f"Update complete: {result.message}")
-            )
+            # Initialize update service (only if enabled in config)
+            # Updates are portal-triggered only when disabled
+            if self.config.updates.enabled:
+                device_secret = os.getenv("OPTIC_DEVICE_SECRET", "")
+                self.update_service = UpdateService(
+                    repo_path=str(Path(__file__).parent.parent),  # Root of the repo
+                    remote_name=self.config.updates.remote,
+                    branch=self.config.updates.branch,
+                    check_interval=float(self.config.updates.check_interval_seconds),
+                    auto_update=self.config.updates.auto_update,
+                    service_name=self.config.updates.service_name,
+                    api_url=self.config.dashboard.api_url,
+                    api_key=self.config.dashboard.api_key,
+                    device_id=self.config.device.id,
+                    device_secret=device_secret
+                )
+                self.update_service.initialize()
+                
+                # Register update callbacks
+                self.update_service.add_update_available_callback(
+                    lambda info: logger.info(f"Update available: {info.commits_behind} commits behind")
+                )
+                self.update_service.add_update_complete_callback(
+                    lambda result: logger.info(f"Update complete: {result.message}")
+                )
+            else:
+                logger.info("Automatic updates disabled - updates will be triggered from portal only")
             
             logger.info("All components initialized successfully")
             return True
@@ -389,13 +403,30 @@ class OpticShield:
     def _get_camera_info(self) -> list:
         """Get camera information for telemetry."""
         cameras = []
-        if self.config.camera.enabled:
+        if self.config.camera.enabled and self.detection_service and self.detection_service.camera:
+            # Get actual camera info from the camera manager
+            camera_info = self.detection_service.camera.get_camera_info()
             cameras.append({
                 "id": f"cam-{self.config.device.id}-0",
-                "name": "Primary Camera",
-                "model": "Pi Camera Module 3" if not self.config.camera.fallback_usb else "USB Camera",
+                "name": camera_info.get("name", "Unknown Camera"),
+                "model": camera_info.get("model", "Unknown"),
+                "type": camera_info.get("type", "unknown"),
+                "device_path": camera_info.get("device_path", "unknown"),
+                "resolution": camera_info.get("resolution", f"{self.config.camera.width}x{self.config.camera.height}"),
+                "fps": camera_info.get("fps", self.config.camera.fps),
+                "status": camera_info.get("status", "unknown")
+            })
+        elif self.config.camera.enabled:
+            # Fallback if camera not initialized yet
+            cameras.append({
+                "id": f"cam-{self.config.device.id}-0",
+                "name": "Unknown Camera",
+                "model": "Unknown",
+                "type": "unknown",
+                "device_path": "unknown",
                 "resolution": f"{self.config.camera.width}x{self.config.camera.height}",
-                "status": "active"
+                "fps": self.config.camera.fps,
+                "status": "unknown"
             })
         return cameras
     

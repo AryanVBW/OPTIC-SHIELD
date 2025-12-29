@@ -69,6 +69,10 @@ class CameraConfig:
     format: str = "RGB888"
     fps: int = 10
     rotation: int = 0
+    # Multi-camera auto-detection (NEW!)
+    multi_camera_enabled: bool = True  # Auto-detect all cameras
+    max_cameras: int = 10  # Maximum cameras to detect
+    # Legacy single-camera settings
     fallback_usb: bool = True
     usb_device_id: int = 0
 
@@ -158,6 +162,18 @@ class LoggingConfig:
     file_path: str = "logs/optic-shield.log"
 
 
+@dataclass
+class UpdateConfig:
+    """Configuration for update service."""
+    enabled: bool = False  # Disabled by default - portal-triggered only
+    remote: str = "origin"
+    branch: str = "main"
+    check_interval_seconds: int = 0  # 0 = no auto-check
+    auto_update: bool = False
+    service_name: str = "optic-shield"
+    report_to_portal: bool = True
+
+
 class Config:
     """Main configuration class with environment support."""
 
@@ -176,6 +192,7 @@ class Config:
         self.dashboard = DashboardConfig()
         self.system = SystemConfig()
         self.logging = LoggingConfig()
+        self.updates = UpdateConfig()
 
         self._load_config()
         self._apply_env_overrides()
@@ -260,6 +277,8 @@ class Config:
                 format=c.get("format", "RGB888"),
                 fps=c.get("fps", 10),
                 rotation=c.get("rotation", 0),
+                multi_camera_enabled=c.get("multi_camera_enabled", True),
+                max_cameras=c.get("max_cameras", 10),
                 fallback_usb=c.get("fallback_usb", True),
                 usb_device_id=c.get("usb_device_id", 0),
             )
@@ -345,6 +364,18 @@ class Config:
                 console=l.get("console", True),
                 file=l.get("file", True),
                 file_path=l.get("file_path", "logs/optic-shield.log"),
+            )
+
+        if "updates" in cfg:
+            u = cfg["updates"]
+            self.updates = UpdateConfig(
+                enabled=u.get("enabled", False),
+                remote=u.get("remote", "origin"),
+                branch=u.get("branch", "main"),
+                check_interval_seconds=u.get("check_interval_seconds", 0),
+                auto_update=u.get("auto_update", False),
+                service_name=u.get("service_name", "optic-shield"),
+                report_to_portal=u.get("report_to_portal", True),
             )
 
     def _apply_env_overrides(self):

@@ -1,6 +1,7 @@
 """
 API client for communicating with the Vercel dashboard.
 Handles authentication, sync, and offline queue management.
+Includes robust connection handling for dev/prod environments.
 """
 
 import logging
@@ -9,10 +10,13 @@ import json
 import threading
 import hashlib
 import hmac
-from typing import Optional, Dict, Any, List
-from dataclasses import dataclass
+import ssl
+import os
+from typing import Optional, Dict, Any, List, Callable
+from dataclasses import dataclass, field
 from queue import Queue, Empty
 from enum import Enum
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +25,80 @@ class ConnectionState(Enum):
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
+    RECONNECTING = "reconnecting"
     ERROR = "error"
+    OFFLINE = "offline"
+
+
+class ConnectionError(Exception):
+    """Base exception for connection errors."""
+    def __init__(self, message: str, error_code: str = "CONNECTION_ERROR", recoverable: bool = True):
+        super().__init__(message)
+        self.message = message
+        self.error_code = error_code
+        self.recoverable = recoverable
+        self.timestamp = time.time()
+
+
+class AuthenticationError(ConnectionError):
+    """Raised when authentication fails."""
+    def __init__(self, message: str = "Authentication failed"):
+        super().__init__(message, "AUTH_FAILED", recoverable=False)
+
+
+class NetworkError(ConnectionError):
+    """Raised when network is unavailable."""
+    def __init__(self, message: str = "Network unavailable"):
+        super().__init__(message, "NETWORK_ERROR", recoverable=True)
+
+
+class ServerError(ConnectionError):
+    """Raised when server returns an error."""
+    def __init__(self, message: str = "Server error", status_code: int = 500):
+        super().__init__(message, f"SERVER_ERROR_{status_code}", recoverable=True)
+        self.status_code = status_code
+
+
+@dataclass
+class ConnectionConfig:
+    """Configuration for connection behavior."""
+    connect_timeout: int = 10
+    read_timeout: int = 30
+    max_retries: int = 3
+    retry_delay: float = 1.0
+    retry_backoff: float = 2.0
+    max_retry_delay: float = 60.0
+    health_check_interval: float = 30.0
+    reconnect_interval: float = 5.0
+    ssl_verify: bool = True
+    
+    @classmethod
+    def for_development(cls) -> "ConnectionConfig":
+        """Configuration optimized for development."""
+        return cls(
+            connect_timeout=5,
+            read_timeout=15,
+            max_retries=2,
+            retry_delay=0.5,
+            health_check_interval=10.0,
+            reconnect_interval=2.0,
+            ssl_verify=False  # Allow self-signed certs in dev
+        )
+    
+    @classmethod
+    def for_production(cls) -> "ConnectionConfig":
+        """Configuration optimized for production."""
+        return cls(
+            connect_timeout=10,
+            read_timeout=30,
+            max_retries=5,
+            retry_delay=1.0,
+            retry_backoff=2.0,
+            max_retry_delay=120.0,
+            health_check_interval=60.0,
+            reconnect_interval=10.0,
+            ssl_verify=True
+        )
 
 
 @dataclass
@@ -57,6 +134,8 @@ class DashboardClient:
     - Offline queue for when network is unavailable
     - Heartbeat for device status monitoring
     - Extended telemetry for comprehensive device monitoring
+    - Environment-aware connection handling (dev/prod)
+    - Robust error handling and recovery
     """
     
     def __init__(
@@ -67,28 +146,44 @@ class DashboardClient:
         device_secret: str = "",
         sync_interval: int = 300,
         heartbeat_interval: int = 60,
-        offline_queue_max_size: int = 1000
+        offline_queue_max_size: int = 1000,
+        environment: str = "production",
+        connection_config: Optional[ConnectionConfig] = None
     ):
-        self.api_url = api_url.rstrip('/')
+        self.api_url = api_url.rstrip('/') if api_url else ""
         self.api_key = api_key
         self.device_id = device_id
         self.device_secret = device_secret
         self.sync_interval = sync_interval
         self.heartbeat_interval = heartbeat_interval
+        self.environment = environment
+        
+        # Set connection config based on environment
+        if connection_config:
+            self.connection_config = connection_config
+        elif environment == "development":
+            self.connection_config = ConnectionConfig.for_development()
+        else:
+            self.connection_config = ConnectionConfig.for_production()
         
         self.state = ConnectionState.DISCONNECTED
         self._offline_queue: Queue = Queue(maxsize=offline_queue_max_size)
         self._stop_event = threading.Event()
         self._sync_thread: Optional[threading.Thread] = None
         self._heartbeat_thread: Optional[threading.Thread] = None
+        self._health_check_thread: Optional[threading.Thread] = None
         
         self._last_sync_time: float = 0
         self._last_heartbeat_time: float = 0
+        self._last_health_check_time: float = 0
         self._sync_success_count = 0
         self._sync_failure_count = 0
         self._detection_count = 0
+        self._consecutive_failures = 0
+        self._last_error: Optional[ConnectionError] = None
         
         self._http_client = None
+        self._ssl_context = None
         self._system_monitor = None
         self._device_info: Dict[str, Any] = {}
         self._cameras: List[Dict[str, Any]] = []
@@ -97,6 +192,62 @@ class DashboardClient:
             "source": "unknown",
             "battery_percent": None
         }
+        
+        # Callbacks for connection events
+        self._on_connected_callbacks: List[Callable[[], None]] = []
+        self._on_disconnected_callbacks: List[Callable[[Optional[ConnectionError]], None]] = []
+        self._on_error_callbacks: List[Callable[[ConnectionError], None]] = []
+        
+        # Initialize SSL context
+        self._init_ssl_context()
+        
+        logger.info(f"DashboardClient initialized for {environment} environment, API URL: {self.api_url}")
+    
+    def _init_ssl_context(self):
+        """Initialize SSL context based on environment."""
+        self._ssl_context = ssl.create_default_context()
+        if not self.connection_config.ssl_verify:
+            # Development mode - allow self-signed certificates
+            self._ssl_context.check_hostname = False
+            self._ssl_context.verify_mode = ssl.CERT_NONE
+            logger.debug("SSL verification disabled for development")
+    
+    def add_connected_callback(self, callback: Callable[[], None]):
+        """Add callback for successful connection."""
+        self._on_connected_callbacks.append(callback)
+    
+    def add_disconnected_callback(self, callback: Callable[[Optional[ConnectionError]], None]):
+        """Add callback for disconnection."""
+        self._on_disconnected_callbacks.append(callback)
+    
+    def add_error_callback(self, callback: Callable[[ConnectionError], None]):
+        """Add callback for connection errors."""
+        self._on_error_callbacks.append(callback)
+    
+    def _notify_connected(self):
+        """Notify connected callbacks."""
+        for callback in self._on_connected_callbacks:
+            try:
+                callback()
+            except Exception as e:
+                logger.error(f"Connected callback error: {e}")
+    
+    def _notify_disconnected(self, error: Optional[ConnectionError] = None):
+        """Notify disconnected callbacks."""
+        for callback in self._on_disconnected_callbacks:
+            try:
+                callback(error)
+            except Exception as e:
+                logger.error(f"Disconnected callback error: {e}")
+    
+    def _notify_error(self, error: ConnectionError):
+        """Notify error callbacks."""
+        self._last_error = error
+        for callback in self._on_error_callbacks:
+            try:
+                callback(error)
+            except Exception as e:
+                logger.error(f"Error callback error: {e}")
     
     def set_system_monitor(self, monitor) -> None:
         """Set reference to system monitor for telemetry."""
@@ -146,59 +297,139 @@ class DashboardClient:
         endpoint: str,
         method: str = "POST",
         data: Optional[Dict] = None,
-        timeout: int = 30
+        timeout: Optional[int] = None,
+        retry: bool = True
     ) -> Optional[Dict]:
-        """Make an HTTP request to the dashboard API."""
+        """
+        Make an HTTP request to the dashboard API with retry logic.
+        
+        Args:
+            endpoint: API endpoint path
+            method: HTTP method
+            data: Request payload
+            timeout: Request timeout (uses config default if None)
+            retry: Whether to retry on failure
+            
+        Returns:
+            Response data dict or None on failure
+        """
         http = self._get_http_client()
         if not http:
             return None
         
+        if not self.api_url:
+            logger.debug("No API URL configured")
+            return None
+        
         url = f"{self.api_url}{endpoint}"
-        timestamp = int(time.time())
+        timeout = timeout or self.connection_config.read_timeout
+        max_retries = self.connection_config.max_retries if retry else 1
         
-        payload = json.dumps(data) if data else ""
-        signature = self._generate_signature(payload, timestamp)
-        
-        headers = {
-            "Content-Type": "application/json",
-            "X-API-Key": self.api_key,
-            "X-Device-ID": self.device_id,
-            "X-Timestamp": str(timestamp),
-            "X-Signature": signature
-        }
-        
-        try:
-            import urllib.request
-            import urllib.error
-            
-            req = urllib.request.Request(
-                url,
-                data=payload.encode() if payload else None,
-                headers=headers,
-                method=method
-            )
-            
-            with urllib.request.urlopen(req, timeout=timeout) as response:
-                response_data = response.read().decode()
-                return json.loads(response_data) if response_data else {}
+        for attempt in range(max_retries):
+            try:
+                timestamp = int(time.time())
+                payload = json.dumps(data) if data else ""
+                signature = self._generate_signature(payload, timestamp)
                 
-        except urllib.error.HTTPError as e:
-            logger.error(f"HTTP error {e.code}: {e.reason}")
-            return None
-        except urllib.error.URLError as e:
-            logger.debug(f"Network error: {e.reason}")
-            return None
-        except Exception as e:
-            logger.error(f"Request error: {e}")
-            return None
+                headers = {
+                    "Content-Type": "application/json",
+                    "X-API-Key": self.api_key,
+                    "X-Device-ID": self.device_id,
+                    "X-Timestamp": str(timestamp),
+                    "X-Signature": signature,
+                    "X-Environment": self.environment
+                }
+                
+                import urllib.request
+                import urllib.error
+                
+                req = urllib.request.Request(
+                    url,
+                    data=payload.encode() if payload else None,
+                    headers=headers,
+                    method=method
+                )
+                
+                # Use SSL context for HTTPS
+                context = self._ssl_context if url.startswith("https") else None
+                
+                with urllib.request.urlopen(req, timeout=timeout, context=context) as response:
+                    response_data = response.read().decode()
+                    result = json.loads(response_data) if response_data else {}
+                    
+                    # Reset failure counter on success
+                    self._consecutive_failures = 0
+                    if self.state != ConnectionState.CONNECTED:
+                        self.state = ConnectionState.CONNECTED
+                        self._notify_connected()
+                    
+                    return result
+                    
+            except urllib.error.HTTPError as e:
+                self._consecutive_failures += 1
+                
+                if e.code == 401:
+                    error = AuthenticationError(f"Authentication failed: {e.reason}")
+                    self._notify_error(error)
+                    logger.error(f"Authentication error: {e.reason}")
+                    return None  # Don't retry auth errors
+                elif e.code >= 500:
+                    error = ServerError(f"Server error: {e.reason}", e.code)
+                    self._notify_error(error)
+                    logger.warning(f"Server error {e.code}: {e.reason} (attempt {attempt + 1}/{max_retries})")
+                else:
+                    logger.error(f"HTTP error {e.code}: {e.reason}")
+                    return None  # Don't retry client errors
+                    
+            except urllib.error.URLError as e:
+                self._consecutive_failures += 1
+                error = NetworkError(f"Network error: {e.reason}")
+                self._notify_error(error)
+                
+                if self.state == ConnectionState.CONNECTED:
+                    self.state = ConnectionState.DISCONNECTED
+                    self._notify_disconnected(error)
+                
+                logger.debug(f"Network error: {e.reason} (attempt {attempt + 1}/{max_retries})")
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON response: {e}")
+                return None
+                
+            except Exception as e:
+                self._consecutive_failures += 1
+                logger.error(f"Request error: {e} (attempt {attempt + 1}/{max_retries})")
+            
+            # Exponential backoff before retry
+            if attempt < max_retries - 1:
+                delay = min(
+                    self.connection_config.retry_delay * (self.connection_config.retry_backoff ** attempt),
+                    self.connection_config.max_retry_delay
+                )
+                time.sleep(delay)
+        
+        # All retries failed
+        if self.state != ConnectionState.ERROR:
+            self.state = ConnectionState.ERROR
+        return None
     
     def start(self):
-        """Start background sync and heartbeat threads."""
+        """Start background sync, heartbeat, and health check threads."""
         if not self.api_url or not self.api_key:
             logger.warning("Dashboard API not configured, running in offline mode")
+            self.state = ConnectionState.OFFLINE
             return
         
         self._stop_event.clear()
+        self.state = ConnectionState.CONNECTING
+        
+        # Initial connection test
+        if self._test_connection():
+            self.state = ConnectionState.CONNECTED
+            logger.info(f"Connected to dashboard at {self.api_url}")
+        else:
+            self.state = ConnectionState.DISCONNECTED
+            logger.warning(f"Initial connection to {self.api_url} failed, will retry")
         
         self._heartbeat_thread = threading.Thread(
             target=self._heartbeat_loop,
@@ -214,7 +445,15 @@ class DashboardClient:
         )
         self._sync_thread.start()
         
-        logger.info("Dashboard client started")
+        # Start health check thread
+        self._health_check_thread = threading.Thread(
+            target=self._health_check_loop,
+            name="DashboardHealthCheck",
+            daemon=True
+        )
+        self._health_check_thread.start()
+        
+        logger.info(f"Dashboard client started for {self.environment} environment")
     
     def stop(self):
         """Stop background threads."""
@@ -226,8 +465,84 @@ class DashboardClient:
         if self._heartbeat_thread and self._heartbeat_thread.is_alive():
             self._heartbeat_thread.join(timeout=5)
         
+        if self._health_check_thread and self._health_check_thread.is_alive():
+            self._health_check_thread.join(timeout=5)
+        
         self.state = ConnectionState.DISCONNECTED
+        self._notify_disconnected()
         logger.info("Dashboard client stopped")
+    
+    def _test_connection(self) -> bool:
+        """Test connection to the dashboard."""
+        try:
+            response = self._make_request("/health", method="GET", retry=False)
+            return response is not None
+        except Exception as e:
+            logger.debug(f"Connection test failed: {e}")
+            return False
+    
+    def _health_check_loop(self):
+        """Background loop for connection health checks."""
+        while not self._stop_event.is_set():
+            try:
+                self._perform_health_check()
+            except Exception as e:
+                logger.error(f"Health check error: {e}")
+            
+            self._stop_event.wait(self.connection_config.health_check_interval)
+    
+    def _perform_health_check(self):
+        """Perform a health check and attempt reconnection if needed."""
+        if self.state == ConnectionState.OFFLINE:
+            return
+        
+        was_connected = self.state == ConnectionState.CONNECTED
+        
+        if self._test_connection():
+            self._last_health_check_time = time.time()
+            self._consecutive_failures = 0
+            
+            if not was_connected:
+                self.state = ConnectionState.CONNECTED
+                self._notify_connected()
+                logger.info("Connection restored to dashboard")
+        else:
+            if was_connected:
+                self.state = ConnectionState.DISCONNECTED
+                error = NetworkError("Health check failed - connection lost")
+                self._notify_disconnected(error)
+                logger.warning("Lost connection to dashboard")
+            
+            # Attempt reconnection
+            if self._consecutive_failures < self.connection_config.max_retries:
+                self.state = ConnectionState.RECONNECTING
+                logger.debug(f"Attempting reconnection (failure count: {self._consecutive_failures})")
+    
+    def check_connection(self) -> bool:
+        """Check if currently connected to the dashboard."""
+        return self.state == ConnectionState.CONNECTED
+    
+    def get_connection_status(self) -> Dict[str, Any]:
+        """Get detailed connection status."""
+        return {
+            "state": self.state.value,
+            "api_url": self.api_url,
+            "environment": self.environment,
+            "consecutive_failures": self._consecutive_failures,
+            "last_heartbeat_time": self._last_heartbeat_time,
+            "last_health_check_time": self._last_health_check_time,
+            "last_error": {
+                "message": self._last_error.message,
+                "code": self._last_error.error_code,
+                "timestamp": self._last_error.timestamp
+            } if self._last_error else None,
+            "config": {
+                "connect_timeout": self.connection_config.connect_timeout,
+                "read_timeout": self.connection_config.read_timeout,
+                "max_retries": self.connection_config.max_retries,
+                "ssl_verify": self.connection_config.ssl_verify
+            }
+        }
     
     def queue_detection(self, payload: SyncPayload) -> bool:
         """Queue a detection for sync to dashboard."""

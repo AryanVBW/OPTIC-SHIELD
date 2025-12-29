@@ -5,6 +5,8 @@ Supports NCNN format for maximum performance on ARM architecture.
 
 import logging
 import time
+import subprocess
+import sys
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
 from dataclasses import dataclass
@@ -13,6 +15,94 @@ import threading
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_ultralytics_installed() -> bool:
+    """
+    Ensure ultralytics package is installed.
+    Auto-installs if missing.
+    
+    Returns:
+        True if ultralytics is available, False if installation failed.
+    """
+    try:
+        import ultralytics
+        logger.debug(f"Ultralytics version: {ultralytics.__version__}")
+        return True
+    except ImportError:
+        logger.warning("Ultralytics not found, attempting auto-installation...")
+        try:
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", 
+                "ultralytics>=8.0.0", "--quiet"
+            ])
+            logger.info("Ultralytics installed successfully")
+            return True
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to auto-install ultralytics: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error during ultralytics installation: {e}")
+            return False
+
+
+def _find_model_path(primary_path: Path, fallback_path: Optional[Path], base_search_dirs: Optional[List[Path]] = None) -> Optional[Path]:
+    """
+    Find a valid model path by searching multiple locations.
+    
+    Args:
+        primary_path: The primary model path to check
+        fallback_path: Optional fallback path
+        base_search_dirs: Additional directories to search for model files
+        
+    Returns:
+        Path to a valid model file, or None if not found
+    """
+    # Check primary path
+    if primary_path.exists():
+        logger.debug(f"Found model at primary path: {primary_path}")
+        return primary_path
+    
+    # Check fallback path
+    if fallback_path and fallback_path.exists():
+        logger.debug(f"Found model at fallback path: {fallback_path}")
+        return fallback_path
+    
+    # Search common model file names
+    model_names = ["yolo11n.pt", "yolov8n.pt", "yolov5n.pt", "best.pt"]
+    
+    # Build search directories
+    search_dirs = []
+    if primary_path.parent.exists():
+        search_dirs.append(primary_path.parent)
+    if fallback_path and fallback_path.parent.exists():
+        search_dirs.append(fallback_path.parent)
+    
+    # Add base search dirs
+    if base_search_dirs:
+        search_dirs.extend([d for d in base_search_dirs if d.exists()])
+    
+    # Add common model directories relative to current working directory
+    cwd = Path.cwd()
+    common_dirs = [
+        cwd / "models",
+        cwd / "weights",
+        cwd,
+        Path(__file__).parent.parent.parent / "models",
+        Path(__file__).parent.parent.parent,
+    ]
+    search_dirs.extend([d for d in common_dirs if d.exists()])
+    
+    # Search for models
+    for search_dir in search_dirs:
+        for model_name in model_names:
+            candidate = search_dir / model_name
+            if candidate.exists():
+                logger.info(f"Found model at: {candidate}")
+                return candidate
+    
+    logger.warning(f"No model found in paths: {[str(d) for d in search_dirs]}")
+    return None
 
 
 @dataclass
@@ -77,20 +167,39 @@ class WildlifeDetector:
         self._max_inference_history = 100
         
     def load_model(self) -> bool:
-        """Load the YOLO model with fallback support."""
+        """Load the YOLO model with fallback support and auto-dependency installation."""
         try:
+            # Step 1: Ensure ultralytics is installed
+            if not _ensure_ultralytics_installed():
+                logger.error("Cannot load model: ultralytics package unavailable")
+                return False
+            
             from ultralytics import YOLO
             
             model_to_load = None
             
-            if self.model_path.exists():
-                model_to_load = str(self.model_path)
-                logger.info(f"Loading model from: {self.model_path}")
-            elif self.fallback_path and self.fallback_path.exists():
-                model_to_load = str(self.fallback_path)
-                logger.warning(f"Primary model not found, using fallback: {self.fallback_path}")
-                self.use_ncnn = False
+            # Step 2: Find valid model path
+            base_search_dirs = [
+                Path(__file__).parent.parent.parent / "models",
+                Path(__file__).parent.parent.parent,
+            ]
+            
+            found_path = _find_model_path(
+                self.model_path, 
+                self.fallback_path,
+                base_search_dirs
+            )
+            
+            if found_path:
+                model_to_load = str(found_path)
+                # Update use_ncnn based on file type
+                if found_path.suffix == '.pt':
+                    self.use_ncnn = False
+                elif found_path.is_dir() or 'ncnn' in found_path.name.lower():
+                    self.use_ncnn = True
+                logger.info(f"Loading model from: {found_path}")
             else:
+                # Step 3: Auto-download if no local model found
                 logger.info("No local model found, downloading yolo11n.pt...")
                 model_to_load = "yolo11n.pt"
                 self.use_ncnn = False
@@ -103,6 +212,11 @@ class WildlifeDetector:
             logger.info(f"Model loaded successfully (NCNN: {self.use_ncnn})")
             return True
             
+        except ImportError as e:
+            logger.error(f"Failed to import ultralytics after installation: {e}")
+            logger.error("Please manually install: pip install ultralytics>=8.0.0")
+            self.model_loaded = False
+            return False
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
             self.model_loaded = False

@@ -12,7 +12,9 @@ detection:
   use_ncnn: false
 
 camera:
-  enabled: false
+  enabled: true
+  fallback_usb: true
+  usb_device_id: 0
 
 storage:
   database:
@@ -41,6 +43,12 @@ upload:
   batch_size: 5
   upload_interval_seconds: 10
   max_image_size_kb: 200
+
+# Updates disabled - only portal-triggered updates
+updates:
+  enabled: false
+  check_interval_seconds: 0
+  auto_update: false
 
 logging:
   level: "DEBUG"

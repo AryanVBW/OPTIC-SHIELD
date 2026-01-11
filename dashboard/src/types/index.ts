@@ -163,3 +163,40 @@ export interface DetectionPayload {
     upload_timestamp?: number
   }
 }
+
+// Alert System Types
+export interface AlertRecipient {
+  id: string
+  name: string
+  phone?: string  // E.164 format for WhatsApp/SMS
+  email?: string
+  preferredChannels: ('whatsapp' | 'sms' | 'email')[]
+  active: boolean
+  createdAt: string
+}
+
+export interface AlertMessage {
+  id: string
+  detectionId: number
+  recipientId: string
+  recipientName: string
+  channel: 'whatsapp' | 'sms' | 'email'
+  status: 'pending' | 'sent' | 'failed' | 'delivered'
+  sentAt?: string
+  deliveredAt?: string
+  error?: string
+}
+
+export interface BulkAlertRequest {
+  detectionIds: number[]
+  recipientIds: string[]
+  channels: ('whatsapp' | 'sms' | 'email')[]
+  customMessage?: string
+}
+
+export interface AlertStats {
+  totalSent: number
+  totalFailed: number
+  byChannel: Record<string, { sent: number; failed: number }>
+  recentAlerts: AlertMessage[]
+}

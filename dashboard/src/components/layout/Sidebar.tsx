@@ -1,4 +1,4 @@
-import { Shield, BarChart3, Camera, Activity, Settings, RefreshCw } from 'lucide-react'
+import { Shield, BarChart3, Camera, Activity, Settings, RefreshCw, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
 import Link from 'next/link'
@@ -59,6 +59,16 @@ export function Sidebar({ onRefresh, isRefreshing }: SidebarProps) {
                         icon={<Activity className="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />}
                     >
                         Detections
+                    </Button>
+                </Link>
+                <Link href="/alerts" className="block w-full">
+                    <Button
+                        variant="ghost"
+                        size="md"
+                        className="w-full justify-start text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50 group"
+                        icon={<Bell className="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />}
+                    >
+                        Alerts
                     </Button>
                 </Link>
                 <Link href="/settings" className="block w-full">
